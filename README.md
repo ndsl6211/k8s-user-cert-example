@@ -30,7 +30,7 @@ user with the mechanism of **Certificate Signing Request**
     - `-out user.csr` specify the output csr file
 
 1. create a CSR to K8s cluster (k8s yaml file)
-    ```bash
+    ```
     cat <<EOF | kubectl apply -f -
     apiVersion: certificates.k8s.io/v1
     kind: CertificateSigningRequest
@@ -96,14 +96,31 @@ user with the mechanism of **Certificate Signing Request**
 
 1. create a ClusterRoleBinding for the new user
     ```
-    kubectl create clusterrolebinding admin-mashu \
+    kubectl create clusterrolebinding admin-user \
     --clusterrole=cluster-admin \
     --user=mashu
     ```
 
 1. congrats! the new user become the cluster admin now!
-   in addition, if you wanna create a new user with limited scope of permission,
-   you should create your customized `Role` or `ClusterRole` by yourself.
+   to be authenticated as the user, export the issued certificate first
+    ```
+    kubectl get csr user-csr -o jsonpath='{.status.certificate}'| base64 -d > user.crt
+    ```
+
+1. with this certificate, create a new user into kubeconfig
+    ```
+    kubectl config set-credentials ${USER_NAME} --client-key=user.key --client-certificate=user.crt --embed-certs=true
+    ```
+   replace the `USER_NAME` with your preferred name
+
+   then, create a new context for that user
+    ```
+    kubectl config set-context ${CONTEXT_NAME} --cluster=${CLUSTER_NAME} --user=${USER_NAME}
+    ```
+   - replace `CONTEXT_NAME` with your preferred name
+   - replace `CLUSTER_NAME` with your cluster name in kubeconfig
+   - `USER_NAME` should be the same as you created in kubeconfig
+
 
 ## Note
 1. the API version for CSR is `certificates.k8s.io/v1`
