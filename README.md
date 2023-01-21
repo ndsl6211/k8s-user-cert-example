@@ -19,7 +19,7 @@ user with the mechanism of **Certificate Signing Request**
     - `2048` specifies the size of the private key to generate in bits
 
 
-2. generate a CSR (certificate signing request) for that user
+1. generate a CSR (certificate signing request) for that user
     ```bash
     openssl req -new -key user.key -out user.csr
     ```
@@ -29,7 +29,7 @@ user with the mechanism of **Certificate Signing Request**
     - `-key user.key` specify the key to use to generate CSR
     - `-out user.csr` specify the output csr file
 
-3. create a CSR to K8s cluster (k8s yaml file)
+1. create a CSR to K8s cluster (k8s yaml file)
     ```bash
     cat <<EOF | kubectl apply -f -
     apiVersion: certificates.k8s.io/v1
@@ -52,31 +52,39 @@ user with the mechanism of **Certificate Signing Request**
     - `.spec.expirationSeconds` is not required
     - `.spec.usages` should contain `client auth` only
 
-4. once the CSR resource created in the cluster, we can check it with command
+1. once the CSR resource created in the cluster, we can check it with command
     ```
     kubectl get csr user-csr
     ```
 
     if there is no error, the output should be
     ```
-    
+    NAME         AGE   SIGNERNAME                            REQUESTOR          REQUESTEDDURATION   CONDITION
+    user-csr     2s    kubernetes.io/kube-apiserver-client   ${current-user}    24h                 Pending
     ```
 
-5. to approve this CSR, use the following command:
+1. to approve this CSR, use the following command:
     ```
     kubectl certificate approve user-csr
     ```
 
-6. and check the status of CSR
+    and check the status of approved csr
+    ```
+    kubectl get csr user-csr
+    ```
+    the `CONDITION` would become `Approved,Issued`
+    ```
+    NAME         AGE   SIGNERNAME                            REQUESTOR          REQUESTEDDURATION   CONDITION
+    user-csr     2s    kubernetes.io/kube-apiserver-client   ${current-user}    24h                 Approved,Issued
+    ```
+
+    or check it with the following command
     ```
     kubectl get csr user-csr -o yaml
-    # or view it as json
     kubectl get csr user-csr -o json
     ```
 
-    if everything is fine, the status of CSR should be `approved`
-
-7. so far, we have done the **authentication phase** for the new user, but the
+1. so far, we have done the **authentication phase** for the new user, but the
    user don't have any permission in this cluster. Therefore we should complete
    the **authorization phase**
 
@@ -86,14 +94,14 @@ user with the mechanism of **Certificate Signing Request**
    for k3d-created cluster, there is a default **admin-permission**
    `ClusterRole` called **cluster-admin**, we can use it directly
 
-8. create a ClusterRoleBinding for the new user
+1. create a ClusterRoleBinding for the new user
     ```
     kubectl create clusterrolebinding admin-mashu \
     --clusterrole=cluster-admin \
     --user=mashu
     ```
 
-9. congrats! the new user become the cluster admin now!
+1. congrats! the new user become the cluster admin now!
    in addition, if you wanna create a new user with limited scope of permission,
    you should create your customized `Role` or `ClusterRole` by yourself.
 
